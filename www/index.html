@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solar Light Bill Generator</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Google Fonts for professional typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Tesseract.js for client-side OCR -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <!-- html2pdf.js for client-side PDF generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- MOBILE TABS: Toggle between Editor and Preview on mobile viewports -->
+    <div class="mobile-tabs no-print">
+      <button type="button" class="tab-btn active" id="tab-edit">📝 Edit Bill</button>
+      <button type="button" class="tab-btn" id="tab-preview">📄 View Bill</button>
+    </div>
+    
+    <!-- LEFT PANEL: Editor and Configurations -->
+    <aside class="control-panel no-print">
+      <header class="panel-header">
+        <div class="logo-area">
+          <span class="icon">☀️</span>
+          <h1>Solar Bill Pro</h1>
+        </div>
+        <p class="subtitle">Interactive Billing & OCR Engine</p>
+      </header>
+
+      <main class="panel-body">
+        
+        <!-- SECTION 1: Reading Entries -->
+        <section class="control-section">
+          <h2><span class="section-num">1</span> Readings / वाचन</h2>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="input-prev-reading">Previous Reading (मागील रीडिंग)</label>
+              <input type="number" id="input-prev-reading" value="528" placeholder="e.g. 528">
+            </div>
+            <div class="form-group">
+              <label for="input-curr-reading">Current Reading (चालू रीडिंग)</label>
+              <input type="number" id="input-curr-reading" value="826" placeholder="e.g. 826">
+            </div>
+          </div>
+          
+          <div class="units-display">
+            <span class="label">Calculated Used Units:</span>
+            <span class="value" id="calc-used-units">298</span>
+          </div>
+        </section>
+
+        <!-- SECTION 2: Meter Photo & OCR -->
+        <section class="control-section">
+          <h2><span class="section-num">2</span> Meter Photo (मीटर फोटो) & OCR</h2>
+          
+          <div class="upload-zone" id="upload-zone">
+            <input type="file" id="file-input" accept="image/*" class="file-hidden">
+            <div class="upload-prompt" id="upload-prompt">
+              <span class="upload-icon">📷</span>
+              <p>Drag & drop or upload meter photo</p>
+              <div class="upload-actions">
+                <button type="button" class="btn-action" id="btn-take-photo">📸 Take Photo (कॅमेरा)</button>
+                <button type="button" class="btn-action btn-secondary" id="btn-choose-gallery">📁 Choose Gallery (गॅलरी)</button>
+              </div>
+              <p class="sample-prompt" style="margin-top: 10px; font-size: 11px;"><a href="#" id="btn-load-sample" style="color: var(--accent-color); text-decoration: underline; pointer-events: auto;">Or load sample meter photo</a></p>
+            </div>
+            <div class="preview-container hidden" id="preview-container">
+              <img id="image-preview" src="#" alt="Meter Preview">
+              <button type="button" class="btn-remove" id="btn-remove" title="Remove image">✕</button>
+            </div>
+          </div>
+
+          <div class="ocr-actions">
+            <button type="button" class="btn-ocr" id="btn-ocr" disabled>
+              <span class="spinner hidden" id="ocr-spinner"></span>
+              <span id="ocr-btn-text">🔍 Run OCR Auto-Read</span>
+            </button>
+          </div>
+          
+          <div id="ocr-status" class="ocr-status hidden"></div>
+          <div id="ocr-candidates" class="ocr-candidates-container hidden">
+            <p>Detected Numbers (Click to use):</p>
+            <div class="candidates-list" id="candidates-list"></div>
+          </div>
+        </section>
+
+        <!-- SECTION 3: General Bill Information -->
+        <section class="control-section">
+          <h2><span class="section-num">3</span> Bill Details (तपशील)</h2>
+          <div class="form-group">
+            <label for="input-bill-month">Bill Month & Year (महिना)</label>
+            <input type="text" id="input-bill-month" value="Nov-25">
+          </div>
+          <div class="form-group">
+            <label for="input-address">Survey No. / Address (पत्ता)</label>
+            <textarea id="input-address" rows="2">Survay No 911/2, Pathardi Rd, Phata, Nashik, Maharashtra 422009</textarea>
+          </div>
+          <div class="form-group">
+            <label for="input-map-link">Google Maps URL</label>
+            <input type="text" id="input-map-link" value="https://maps.app.goo.gl/HXJzoWqi6dG4AHh9A">
+          </div>
+        </section>
+
+        <!-- SECTION 4: Bill Factors (Advanced Configurations) -->
+        <section class="control-section collapsed" id="factors-section">
+          <div class="section-header-toggle" id="factors-toggle">
+            <h2><span class="section-num">4</span> Rates & Factors (दर आणि घटक)</h2>
+            <span class="toggle-arrow">▼</span>
+          </div>
+          <div class="factors-content hidden" id="factors-content">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="factor-fix-charge">Fix Charge (स्थिर शुल्क)</label>
+                <input type="number" id="factor-fix-charge" value="517" step="1">
+              </div>
+              <div class="form-group">
+                <label for="factor-elec-rate">Elec Rate/Unit (वीज आकार दर)</label>
+                <input type="number" id="factor-elec-rate" value="8.00" step="0.01">
+              </div>
+              <div class="form-group">
+                <label for="factor-rate-per-unit">Rate/Unit Factor (वाहन आकार)</label>
+                <input type="number" id="factor-rate-per-unit" value="1.170" step="0.001">
+              </div>
+              <div class="form-group">
+                <label for="factor-duty-pct">Electricity Duty % (वीज शुल्क %)</label>
+                <input type="number" id="factor-duty-pct" value="21" step="1">
+              </div>
+              <div class="form-group">
+                <label for="factor-duty-tax">Duty Tax per Unit (शुल्क कर)</label>
+                <input type="number" id="factor-duty-tax" value="0.19" step="0.01">
+              </div>
+            </div>
+            
+            <div class="form-group margin-top">
+              <label for="desc-rate-per-unit">Electricity Rate per Unit Label (Marathi)</label>
+              <input type="text" id="desc-rate-per-unit" value="वाहन आकार @ ₹1.47 / यु. (Electricity Rate per Unit)">
+            </div>
+            <div class="form-group">
+              <label for="desc-duty-tax">Duty Tax Label (Marathi)</label>
+              <input type="text" id="desc-duty-tax" value="वीज शुल्क कर प्रत्येक युनिटमागे ₹0.1904 इतका &quot;वीज शुल्क कर&quot; (Electricity Duty Tax)">
+            </div>
+            
+            <button type="button" class="btn-secondary" id="btn-reset-factors">Reset to Default Factors</button>
+          </div>
+        </section>
+
+      </main>
+
+      <footer class="panel-footer" style="display: flex; gap: var(--spacing-sm); flex-direction: column;">
+        <button type="button" class="btn-primary" id="btn-print">
+          <span>📄 Save / Export PDF</span>
+        </button>
+        <button type="button" class="btn-primary hidden" id="btn-share" style="background: var(--accent-color); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);">
+          <span>📤 Share PDF File</span>
+        </button>
+      </footer>
+    </aside>
+
+    <!-- RIGHT PANEL: Live Bill Document Preview -->
+    <main class="document-preview">
+      <div class="doc-container" id="bill-document">
+        
+        <!-- Address & Map Link -->
+        <div class="doc-header">
+          <p class="address-text" id="preview-address">Survay No 911/2, Pathardi Rd, Phata, Nashik, Maharashtra 422009</p>
+          <p class="map-link"><a href="https://maps.app.goo.gl/HXJzoWqi6dG4AHh9A" target="_blank" id="preview-map-link">https://maps.app.goo.gl/HXJzoWqi6dG4AHh9A</a></p>
+        </div>
+
+        <!-- Bill Table -->
+        <table class="bill-table">
+          <thead>
+            <tr>
+              <th class="col-particulars">Slab</th>
+              <th class="col-factor">Factor</th>
+              <th class="col-amount header-finalized">
+                <div class="finalized-label">Finalized</div>
+                <div class="amount-label">Amount (₹)</div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Meter Readings Header Row -->
+            <tr class="section-row">
+              <td>वीज मीटर वाचन तपशील:</td>
+              <td></td>
+              <td class="cell-month" id="preview-month">Nov-25</td>
+            </tr>
+            <tr>
+              <td class="indent-1">"चालू रीडिंग" "Current Reading"</td>
+              <td></td>
+              <td class="align-right font-medium" id="preview-curr-reading">826</td>
+            </tr>
+            <tr>
+              <td class="indent-1">मागील रीडिंग</td>
+              <td></td>
+              <td class="align-right font-medium" id="preview-prev-reading">528</td>
+            </tr>
+            <tr class="border-double-bottom">
+              <td class="indent-1">वापरलेले युनिट (Used Units)</td>
+              <td></td>
+              <td class="align-right font-medium" id="preview-used-units">298</td>
+            </tr>
+
+            <!-- Calculations Rows -->
+            <tr>
+              <td>स्थिर शुल्क Fix Charge</td>
+              <td class="bg-factor-green align-right" id="preview-factor-fix-charge">517</td>
+              <td class="align-right">0</td>
+            </tr>
+            <tr>
+              <td>वीज आकार (Electricity Bill Amount)</td>
+              <td class="bg-factor-green align-right" id="preview-factor-elec-rate">8</td>
+              <td class="align-right" id="preview-amt-elec-bill">2,384</td>
+            </tr>
+            <tr>
+              <td id="preview-desc-rate-per-unit">वाहन आकार @ ₹1.47 / यु. (Electricity Rate per Unit)</td>
+              <td class="align-right" id="preview-factor-rate-per-unit">1.170</td>
+              <td class="align-right" id="preview-amt-rate-per-unit">349</td>
+            </tr>
+            <tr>
+              <td>इंधन समायोजन आकार (Fuel Adjustment Charges / FAC)</td>
+              <td></td>
+              <td class="align-right" id="preview-amt-fac"></td>
+            </tr>
+            <tr>
+              <td>वीज शुल्क 21% कर" Electricity Duty (ED)</td>
+              <td class="align-right" id="preview-factor-duty-pct">21%</td>
+              <td class="align-right" id="preview-amt-duty">574</td>
+            </tr>
+            <tr>
+              <td id="preview-desc-duty-tax">वीज शुल्क कर प्रत्येक युनिटमागे ₹0.1904 इतका "वीज शुल्क कर" (Electricity Duty Tax)</td>
+              <td class="align-right" id="preview-factor-duty-tax">0.19</td>
+              <td class="align-right" id="preview-amt-duty-tax">57</td>
+            </tr>
+            <tr class="border-double-bottom">
+              <td>इतर आकार</td>
+              <td></td>
+              <td class="align-right"></td>
+            </tr>
+            
+            <!-- Total Current electricity row -->
+            <tr class="total-row">
+              <td class="font-bold">एकूण चालू वीज देयक: ( Total Current Electricity Payable Amount)</td>
+              <td></td>
+              <td class="align-right font-bold bg-total-yellow" id="preview-total-payable">3,363</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Final Green Summary bar -->
+        <div class="final-payable-bar" id="preview-payable-bar">
+          3,363
+        </div>
+
+        <!-- Meter Image Attachment section -->
+        <div class="meter-image-section">
+          <div class="meter-image-placeholder" id="document-image-placeholder">
+            <span class="camera-icon">📷</span>
+            <p>Meter photo will appear here when uploaded</p>
+          </div>
+          <img id="document-image" class="hidden" src="#" alt="Electricity Meter Attachment">
+        </div>
+
+      </div>
+    </main>
+
+  </div>
+  
+  <script src="capacitor.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
