@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Solar Light Bill Generator</title>
+  <title>Solar Light Bill Generator — Mahavitaran MSEDCL</title>
+  <meta name="description" content="Generate accurate solar electricity bills for Mahavitaran (MSEDCL) consumers in Nagpur, Maharashtra. Supports LT-1 Residential and LT-2 Commercial tariff slabs.">
   <link rel="stylesheet" href="style.css">
   <!-- Google Fonts for professional typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -29,11 +30,38 @@
           <span class="icon">☀️</span>
           <h1>Solar Bill Pro</h1>
         </div>
-        <p class="subtitle">Interactive Billing & OCR Engine</p>
+        <p class="subtitle">Mahavitaran MSEDCL — Interactive Billing & OCR Engine</p>
       </header>
 
       <main class="panel-body">
-        
+
+        <!-- CONSUMER TYPE SELECTOR -->
+        <section class="control-section">
+          <h2><span class="section-num">0</span> Consumer Type (ग्राहक प्रकार)</h2>
+          <div class="consumer-type-toggle">
+            <button type="button" class="type-btn active" id="btn-type-residential" data-type="residential">
+              🏠 Residential (LT-1)
+            </button>
+            <button type="button" class="type-btn" id="btn-type-commercial" data-type="commercial">
+              🏢 Commercial (LT-2)
+            </button>
+          </div>
+          <!-- LT-2 Sub-category selector (hidden for residential) -->
+          <div class="form-group lt2-only hidden" id="lt2-subcat-group">
+            <label for="select-lt2-subcat">LT-II Sub-Category</label>
+            <select id="select-lt2-subcat" class="styled-select">
+              <option value="A">LT-II A — Load ≤ 20 kW (₹8.27/unit, Fixed ₹470)</option>
+              <option value="B">LT-II B — Load 20–50 kW (₹12.63/unit, Fixed ₹470/kVA)</option>
+              <option value="C">LT-II C — Load > 50 kW (₹14.93/unit, Fixed ₹470/kVA)</option>
+            </select>
+          </div>
+          <!-- Sanctioned Load Input -->
+          <div class="form-group" id="sanctioned-load-group">
+            <label for="input-sanctioned-load">Sanctioned Load (kW/kVA) — For Fixed Charge</label>
+            <input type="number" id="input-sanctioned-load" value="1" step="0.5" min="0.5">
+          </div>
+        </section>
+
         <!-- SECTION 1: Reading Entries -->
         <section class="control-section">
           <h2><span class="section-num">1</span> Readings / वाचन</h2>
@@ -113,39 +141,65 @@
             <span class="toggle-arrow">▼</span>
           </div>
           <div class="factors-content hidden" id="factors-content">
+
+            <!-- LT-1 RESIDENTIAL SLABS -->
+            <div id="lt1-slabs-group" class="lt1-only">
+              <p class="factors-subtitle">⚡ LT-1 Residential Energy Slabs (MSEDCL 2024-25)</p>
+              <div class="slab-grid">
+                <div class="slab-row">
+                  <span class="slab-label">0 – 100 units (₹/unit)</span>
+                  <input type="number" id="slab-0-100" value="3.07" step="0.01" class="slab-input">
+                </div>
+                <div class="slab-row">
+                  <span class="slab-label">101 – 300 units (₹/unit)</span>
+                  <input type="number" id="slab-101-300" value="7.38" step="0.01" class="slab-input">
+                </div>
+                <div class="slab-row">
+                  <span class="slab-label">301 – 500 units (₹/unit)</span>
+                  <input type="number" id="slab-301-500" value="9.54" step="0.01" class="slab-input">
+                </div>
+                <div class="slab-row">
+                  <span class="slab-label">Above 500 units (₹/unit)</span>
+                  <input type="number" id="slab-above-500" value="11.44" step="0.01" class="slab-input">
+                </div>
+              </div>
+            </div>
+
+            <!-- LT-2 COMMERCIAL FLAT RATE -->
+            <div id="lt2-flat-group" class="lt2-only hidden">
+              <p class="factors-subtitle">⚡ LT-2 Commercial Energy Rate</p>
+              <div class="form-group">
+                <label for="factor-lt2-energy-rate">Energy Rate (₹/unit) — set by sub-category</label>
+                <input type="number" id="factor-lt2-energy-rate" value="8.27" step="0.01">
+              </div>
+            </div>
+
+            <!-- COMMON FACTORS -->
+            <p class="factors-subtitle" style="margin-top: 12px;">📋 Common Charges</p>
             <div class="form-grid">
               <div class="form-group">
-                <label for="factor-fix-charge">Fix Charge (स्थिर शुल्क)</label>
-                <input type="number" id="factor-fix-charge" value="517" step="1">
+                <label for="factor-fix-charge">Fixed Charge ₹ (स्थिर शुल्क)</label>
+                <input type="number" id="factor-fix-charge" value="125" step="1">
               </div>
               <div class="form-group">
-                <label for="factor-elec-rate">Elec Rate/Unit (वीज आकार दर)</label>
-                <input type="number" id="factor-elec-rate" value="8.00" step="0.01">
+                <label for="factor-wheeling-charge">Wheeling Charge ₹/unit (वाहन आकार)</label>
+                <input type="number" id="factor-wheeling-charge" value="1.17" step="0.01">
               </div>
               <div class="form-group">
-                <label for="factor-rate-per-unit">Rate/Unit Factor (वाहन आकार)</label>
-                <input type="number" id="factor-rate-per-unit" value="1.170" step="0.001">
+                <label for="factor-fac">FAC ₹/unit (इंधन समायोजन)</label>
+                <input type="number" id="factor-fac" value="0.25" step="0.01">
               </div>
               <div class="form-group">
                 <label for="factor-duty-pct">Electricity Duty % (वीज शुल्क %)</label>
-                <input type="number" id="factor-duty-pct" value="21" step="1">
+                <input type="number" id="factor-duty-pct" value="16" step="1">
               </div>
               <div class="form-group">
-                <label for="factor-duty-tax">Duty Tax per Unit (शुल्क कर)</label>
-                <input type="number" id="factor-duty-tax" value="0.19" step="0.01">
+                <label for="factor-meter-rent">Meter Rent ₹/month (मीटर भाडे)</label>
+                <input type="number" id="factor-meter-rent" value="10" step="1">
               </div>
             </div>
             
-            <div class="form-group margin-top">
-              <label for="desc-rate-per-unit">Electricity Rate per Unit Label (Marathi)</label>
-              <input type="text" id="desc-rate-per-unit" value="वाहन आकार @ ₹1.47 / यु. (Electricity Rate per Unit)">
-            </div>
-            <div class="form-group">
-              <label for="desc-duty-tax">Duty Tax Label (Marathi)</label>
-              <input type="text" id="desc-duty-tax" value="वीज शुल्क कर प्रत्येक युनिटमागे ₹0.1904 इतका &quot;वीज शुल्क कर&quot; (Electricity Duty Tax)">
-            </div>
-            
-            <button type="button" class="btn-secondary" id="btn-reset-factors">Reset to Default Factors</button>
+            <button type="button" class="btn-secondary" id="btn-reset-factors">↺ Reset to MSEDCL Defaults</button>
           </div>
         </section>
 
@@ -165,6 +219,9 @@
     <main class="document-preview">
       <div class="doc-container" id="bill-document">
         
+        <!-- Consumer Type Badge -->
+        <div class="doc-consumer-badge" id="preview-consumer-badge">🏠 Residential — LT-1 (MSEDCL)</div>
+
         <!-- Address & Map Link -->
         <div class="doc-header">
           <p class="address-text" id="preview-address">Survay No 911/2, Pathardi Rd, Phata, Nashik, Maharashtra 422009</p>
@@ -175,8 +232,8 @@
         <table class="bill-table">
           <thead>
             <tr>
-              <th class="col-particulars">Slab</th>
-              <th class="col-factor">Factor</th>
+              <th class="col-particulars">Slab / Particular</th>
+              <th class="col-factor">Factor / Rate</th>
               <th class="col-amount header-finalized">
                 <div class="finalized-label">Finalized</div>
                 <div class="amount-label">Amount (₹)</div>
@@ -206,55 +263,60 @@
               <td class="align-right font-medium" id="preview-used-units">298</td>
             </tr>
 
-            <!-- Calculations Rows -->
+            <!-- Fixed Charge Row -->
             <tr>
-              <td>स्थिर शुल्क Fix Charge</td>
-              <td class="bg-factor-green align-right" id="preview-factor-fix-charge">517</td>
-              <td class="align-right">0</td>
+              <td>स्थिर शुल्क — Fixed Charge</td>
+              <td class="bg-factor-green align-right" id="preview-factor-fix-charge">125</td>
+              <td class="align-right" id="preview-amt-fix-charge">125</td>
             </tr>
+
+            <!-- Energy Charge Rows — dynamically generated by JS -->
+            <tr class="section-row-sub">
+              <td colspan="3">⚡ वीज आकार — Energy Charges</td>
+            </tr>
+            <!-- Slab rows injected by JS into tbody#slab-rows-body -->
+            <tr id="slab-rows-placeholder" class="hidden"><td colspan="3"></td></tr>
+
+            <!-- Wheeling Charge -->
             <tr>
-              <td>वीज आकार (Electricity Bill Amount)</td>
-              <td class="bg-factor-green align-right" id="preview-factor-elec-rate">8</td>
-              <td class="align-right" id="preview-amt-elec-bill">2,384</td>
+              <td>वाहन आकार — Wheeling Charge</td>
+              <td class="align-right" id="preview-factor-wheeling">₹1.170/unit</td>
+              <td class="align-right" id="preview-amt-wheeling">349</td>
             </tr>
+
+            <!-- FAC -->
             <tr>
-              <td id="preview-desc-rate-per-unit">वाहन आकार @ ₹1.47 / यु. (Electricity Rate per Unit)</td>
-              <td class="align-right" id="preview-factor-rate-per-unit">1.170</td>
-              <td class="align-right" id="preview-amt-rate-per-unit">349</td>
+              <td>इंधन समायोजन आकार — Fuel Adjustment Charge (FAC)</td>
+              <td class="align-right" id="preview-factor-fac">₹0.25/unit</td>
+              <td class="align-right" id="preview-amt-fac">75</td>
             </tr>
+
+            <!-- Electricity Duty -->
             <tr>
-              <td>इंधन समायोजन आकार (Fuel Adjustment Charges / FAC)</td>
-              <td></td>
-              <td class="align-right" id="preview-amt-fac"></td>
+              <td id="preview-ed-label">वीज शुल्क 16% — Electricity Duty (ED)</td>
+              <td class="align-right" id="preview-factor-duty-pct">16%</td>
+              <td class="align-right" id="preview-amt-duty">351</td>
             </tr>
-            <tr>
-              <td>वीज शुल्क 21% कर" Electricity Duty (ED)</td>
-              <td class="align-right" id="preview-factor-duty-pct">21%</td>
-              <td class="align-right" id="preview-amt-duty">574</td>
-            </tr>
-            <tr>
-              <td id="preview-desc-duty-tax">वीज शुल्क कर प्रत्येक युनिटमागे ₹0.1904 इतका "वीज शुल्क कर" (Electricity Duty Tax)</td>
-              <td class="align-right" id="preview-factor-duty-tax">0.19</td>
-              <td class="align-right" id="preview-amt-duty-tax">57</td>
-            </tr>
+
+            <!-- Meter Rent -->
             <tr class="border-double-bottom">
-              <td>इतर आकार</td>
+              <td>मीटर भाडे — Meter Rent</td>
               <td></td>
-              <td class="align-right"></td>
+              <td class="align-right" id="preview-amt-meter-rent">10</td>
             </tr>
             
-            <!-- Total Current electricity row -->
+            <!-- Total -->
             <tr class="total-row">
-              <td class="font-bold">एकूण चालू वीज देयक: ( Total Current Electricity Payable Amount)</td>
+              <td class="font-bold">एकूण चालू वीज देयक: (Total Current Electricity Payable)</td>
               <td></td>
-              <td class="align-right font-bold bg-total-yellow" id="preview-total-payable">3,363</td>
+              <td class="align-right font-bold bg-total-yellow" id="preview-total-payable">2,677</td>
             </tr>
           </tbody>
         </table>
 
         <!-- Final Green Summary bar -->
         <div class="final-payable-bar" id="preview-payable-bar">
-          3,363
+          2,677
         </div>
 
         <!-- Meter Image Attachment section -->
