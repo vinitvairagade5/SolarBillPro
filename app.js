@@ -26,6 +26,7 @@ const factorWheelingCharge = document.getElementById('factor-wheeling-charge');
 const factorFac = document.getElementById('factor-fac');
 const factorDutyPct = document.getElementById('factor-duty-pct');
 const factorMeterRent = document.getElementById('factor-meter-rent');
+const factorTosCharge = document.getElementById('factor-tos-charge');
 
 const lt1SlabsGroup = document.getElementById('lt1-slabs-group');
 const lt2FlatGroup = document.getElementById('lt2-flat-group');
@@ -80,6 +81,8 @@ const previewEdLabel = document.getElementById('preview-ed-label');
 const previewFactorDutyPct = document.getElementById('preview-factor-duty-pct');
 const previewAmtDuty = document.getElementById('preview-amt-duty');
 const previewAmtMeterRent = document.getElementById('preview-amt-meter-rent');
+const previewFactorTos = document.getElementById('preview-factor-tos');
+const previewAmtTos = document.getElementById('preview-amt-tos');
 
 const previewTotalPayable = document.getElementById('preview-total-payable');
 const previewPayableBar = document.getElementById('preview-payable-bar');
@@ -95,14 +98,15 @@ let uploadedImageSrc = null;
 const DEFAULTS_RESIDENTIAL = {
   sanctionedLoad: 1,
   fixCharge: 125, // ₹125 per kW/month
-  wheelingCharge: 1.17,
-  fac: 0.25,
+  wheelingCharge: 1.47,
+  fac: 0.35,
   dutyPct: 16,
   meterRent: 10,
-  slab_0_100: 3.07,
-  slab_101_300: 7.38,
-  slab_301_500: 9.54,
-  slab_above_500: 11.44,
+  tosRate: 0.1904,
+  slab_0_100: 5.05,
+  slab_101_300: 10.25,
+  slab_301_500: 13.80,
+  slab_above_500: 15.80,
   address: 'Survay No 911/2, Pathardi Rd, Phata, Nashik, Maharashtra 422009',
   mapLink: 'https://maps.app.goo.gl/HXJzoWqi6dG4AHh9A'
 };
@@ -110,11 +114,12 @@ const DEFAULTS_RESIDENTIAL = {
 const DEFAULTS_COMMERCIAL = {
   subCat: 'A',
   sanctionedLoad: 1,
-  fixCharge: 470, // ₹470 per connection/month (SubCat A) or per kVA/month (SubCat B & C)
-  wheelingCharge: 1.17,
-  fac: 0.25,
-  dutyPct: 16,
+  fixCharge: 540, 
+  wheelingCharge: 1.47,
+  fac: 0.35,
+  dutyPct: 21,
   meterRent: 30,
+  tosRate: 0.2894,
   energyRate: 8.27, // SubCat A default
   address: 'Survay No 911/2, Pathardi Rd, Phata, Nashik, Maharashtra 422009',
   mapLink: 'https://maps.app.goo.gl/HXJzoWqi6dG4AHh9A'
@@ -135,7 +140,8 @@ function registerEvents() {
     inputPrevReading, inputCurrReading, inputBillMonth, inputAddress, inputMapLink,
     inputSanctionedLoad, selectLt2Subcat,
     slab0_100, slab101_300, slab301_500, slabAbove500, factorLt2EnergyRate,
-    factorFixCharge, factorWheelingCharge, factorFac, factorDutyPct, factorMeterRent
+    factorFixCharge, factorWheelingCharge, factorFac, factorDutyPct, factorMeterRent,
+    factorTosCharge
   ];
 
   inputsToTrack.forEach(input => {
@@ -174,17 +180,17 @@ function registerEvents() {
     if (subCat === 'A') {
       inputSanctionedLoad.value = 1;
       factorLt2EnergyRate.value = 8.27;
-      factorFixCharge.value = 470;
+      factorFixCharge.value = 540;
       factorMeterRent.value = 30;
     } else if (subCat === 'B') {
       inputSanctionedLoad.value = 21;
       factorLt2EnergyRate.value = 12.63;
-      factorFixCharge.value = 470;
+      factorFixCharge.value = 540;
       factorMeterRent.value = 30;
     } else if (subCat === 'C') {
       inputSanctionedLoad.value = 51;
       factorLt2EnergyRate.value = 14.93;
-      factorFixCharge.value = 470;
+      factorFixCharge.value = 540;
       factorMeterRent.value = 30;
     }
     calculateBill();
@@ -323,6 +329,7 @@ function resetFactorsToTypeDefaults() {
     factorFac.value = DEFAULTS_RESIDENTIAL.fac.toFixed(2);
     factorDutyPct.value = DEFAULTS_RESIDENTIAL.dutyPct;
     factorMeterRent.value = DEFAULTS_RESIDENTIAL.meterRent;
+    factorTosCharge.value = DEFAULTS_RESIDENTIAL.tosRate.toFixed(4);
     slab0_100.value = DEFAULTS_RESIDENTIAL.slab_0_100.toFixed(2);
     slab101_300.value = DEFAULTS_RESIDENTIAL.slab_101_300.toFixed(2);
     slab301_500.value = DEFAULTS_RESIDENTIAL.slab_301_500.toFixed(2);
@@ -335,6 +342,7 @@ function resetFactorsToTypeDefaults() {
     factorFac.value = DEFAULTS_COMMERCIAL.fac.toFixed(2);
     factorDutyPct.value = DEFAULTS_COMMERCIAL.dutyPct;
     factorMeterRent.value = DEFAULTS_COMMERCIAL.meterRent;
+    factorTosCharge.value = DEFAULTS_COMMERCIAL.tosRate.toFixed(4);
     
     // Set energy rate based on Commercial subcat
     if (subCat === 'A') factorLt2EnergyRate.value = 8.27;
@@ -368,6 +376,7 @@ function calculateBill() {
   const facRate = parseFloat(factorFac.value) || 0;
   const dutyPctVal = parseFloat(factorDutyPct.value) || 0;
   const meterRentVal = parseFloat(factorMeterRent.value) || 0;
+  const tosRateVal = parseFloat(factorTosCharge.value) || 0;
 
   let energyChargeTotal = 0;
   const calculatedSlabs = [];
@@ -447,12 +456,18 @@ function calculateBill() {
   const amtWheeling = usedUnits * wheelingRate;
   const amtFac = usedUnits * facRate;
 
-  // Subtotal for Duty Calculation (Energy + Wheeling + FAC)
-  const subtotalForDuty = energyChargeTotal + amtWheeling + amtFac;
+  // Subtotal for Duty Calculation (Energy + Wheeling + FAC. Commercial also includes Fixed Charge)
+  let subtotalForDuty = energyChargeTotal + amtWheeling + amtFac;
+  if (currentConsumerType === 'commercial') {
+    subtotalForDuty += finalFixedCharge;
+  }
   const amtDuty = subtotalForDuty * (dutyPctVal / 100);
 
+  // Tax on Sale of Electricity (TOS)
+  const amtTos = usedUnits * tosRateVal;
+
   // Total payable matches exact float sums, rounded at the very end
-  const totalPayableRaw = finalFixedCharge + energyChargeTotal + amtWheeling + amtFac + amtDuty + meterRentVal;
+  const totalPayableRaw = finalFixedCharge + energyChargeTotal + amtWheeling + amtFac + amtDuty + meterRentVal + amtTos;
   const totalPayableRounded = Math.round(totalPayableRaw);
 
   // Update Right Panel Preview Document
@@ -480,6 +495,9 @@ function calculateBill() {
   previewAmtDuty.textContent = formatCurrency(amtDuty);
 
   previewAmtMeterRent.textContent = formatCurrency(meterRentVal);
+
+  previewFactorTos.textContent = `₹${tosRateVal.toFixed(4)}/unit`;
+  previewAmtTos.textContent = formatCurrency(amtTos);
 
   // Dynamic Slabs rendering
   document.querySelectorAll('.dynamic-slab-row').forEach(row => row.remove());
@@ -657,6 +675,7 @@ function saveToLocalStorage() {
     fac: factorFac.value,
     dutyPct: factorDutyPct.value,
     meterRent: factorMeterRent.value,
+    tosRate: factorTosCharge.value,
     slab_0_100: slab0_100.value,
     slab_101_300: slab101_300.value,
     slab_301_500: slab301_500.value,
@@ -686,6 +705,7 @@ function loadFromLocalStorage() {
     if (data.fac !== undefined) factorFac.value = data.fac;
     if (data.dutyPct !== undefined) factorDutyPct.value = data.dutyPct;
     if (data.meterRent !== undefined) factorMeterRent.value = data.meterRent;
+    if (data.tosRate !== undefined) factorTosCharge.value = data.tosRate;
     
     if (data.slab_0_100 !== undefined) slab0_100.value = data.slab_0_100;
     if (data.slab_101_300 !== undefined) slab101_300.value = data.slab_101_300;
